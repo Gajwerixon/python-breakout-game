@@ -23,6 +23,7 @@ class Game:
 
         # --- Initialize game ---
         self.level.create_walls()
+        self.level.create_bricks()
 
     def run_game(self):
         """Main game loop"""
