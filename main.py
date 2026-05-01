@@ -18,12 +18,12 @@ class Game:
         
         # --- Sprites ---
         self.all_sprites = pygame.sprite.Group()
-        self.paddle = Paddle(self.all_sprites)
-        self.level = Level(self.all_sprites)
+        self.obstacles = pygame.sprite.Group()
+        self.level = Level(self.all_sprites, self.obstacles)
+        self.paddle = Paddle(self.all_sprites, self.obstacles)
 
         # --- Initialize game ---
-        self.level.create_walls()
-        self.level.create_bricks()
+        self.level.initialize_game()
 
     def run_game(self):
         """Main game loop"""
