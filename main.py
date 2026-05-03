@@ -3,6 +3,7 @@ from settings import *
 from sys import exit
 
 from paddle import Paddle
+from ball import Ball
 from level import Level
 
 class Game:
@@ -21,6 +22,7 @@ class Game:
         self.obstacles = pygame.sprite.Group()
         self.level = Level(self.all_sprites, self.obstacles)
         self.paddle = Paddle(self.all_sprites, self.obstacles)
+        self.ball = Ball(self.all_sprites, self.obstacles, self.paddle)
 
         # --- Initialize game ---
         self.level.initialize_game()

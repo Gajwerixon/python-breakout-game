@@ -16,9 +16,9 @@ class Level:
         """Create walls"""
         groups = (self.all_sprites, self.obstacles)
 
-        top = Wall(WIDTH - OFFSET_X * 2, WALL_THICKNESS, OFFSET_X, OFFSET_Y, (self.obstacles, self.all_sprites))
-        left = Wall(WALL_THICKNESS, HEIGHT, OFFSET_X, 0, (self.obstacles, self.all_sprites))
-        right = Wall(WALL_THICKNESS, HEIGHT, WIDTH - OFFSET_X, 0, groups)
+        Wall(WIDTH - OFFSET_X * 2, WALL_THICKNESS, OFFSET_X, OFFSET_Y, (self.obstacles, self.all_sprites))
+        Wall(WALL_THICKNESS, HEIGHT, OFFSET_X, 0, (self.obstacles, self.all_sprites))
+        Wall(WALL_THICKNESS, HEIGHT, WIDTH - OFFSET_X, 0, groups)
 
     def create_bricks(self):
         """Create bricks"""
@@ -28,8 +28,8 @@ class Level:
             color_idx = (col_idx // ROWS_PER_COLOR) % len(BRICK_COLORS)
             current_color = BRICK_COLORS[color_idx]
             for row in range(BRICKS_ROW):
-                x = MARGIN_X + (BRICK_GAP + BRICK_WIDTH) * row
-                y = MARGIN_Y + (BRICK_HEIGHT + BRICK_GAP) * (col_idx)
+                x = MARGIN_X + BRICK_WIDTH * row
+                y = MARGIN_Y + BRICK_HEIGHT * (col_idx)
                 Brick(current_color, x, y, groups)
 
 class Wall(pygame.sprite.Sprite):
@@ -40,10 +40,19 @@ class Wall(pygame.sprite.Sprite):
         self.image.fill(WALL_COLOR)
         self.rect = self.image.get_rect(topleft = (pos_x, pos_y))
 
+        self.is_wall = True
+
 class Brick(pygame.sprite.Sprite):
     """Brick class"""
     def __init__(self, color, pos_x, pos_y, groups):
         super().__init__(groups)
         self.image = pygame.Surface((BRICK_WIDTH, BRICK_HEIGHT))
-        self.image.fill(color)
+        # --- Fill with black (for border) ---
+        self.image.fill('black')
+
+        # --- Add inner rect ---
+        inner_rect = pygame.Rect(2, 2, BRICK_WIDTH - 4, BRICK_HEIGHT - 4)
+        pygame.draw.rect(self.image, color, inner_rect)
         self.rect = self.image.get_rect(topleft = (pos_x, pos_y))
+
+        self.is_brick = True
