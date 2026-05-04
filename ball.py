@@ -22,15 +22,14 @@ class Ball(pygame.sprite.Sprite):
     def ball_start_pos(self):
         """Choose random ball start position"""
         pos_y = BALL_START_Y
-        pos_x = randint(OFFSET_X + WALL_THICKNESS + 10, 
-                        WIDTH - OFFSET_X - WALL_THICKNESS - 10)
+        pos_x = randint(350, 450)
         return (pos_x, pos_y)
     
     @property
     def ball_start_direction(self):
         """Select random ball start direction"""
-        x = uniform(0.25, 0.75) * choice([-1, 1])
-        y = uniform(0.35, 0.65)
+        x = uniform(0.475, 0.525) * choice([-1, 1])
+        y = uniform(0.475, 0.525)
         return pygame.Vector2(x, y)
     
     def movement(self, dt):
@@ -59,16 +58,25 @@ class Ball(pygame.sprite.Sprite):
     
     def handle_paddle_collision(self, axis):
         """Handle collision with paddle"""
+        # --- Horizontal ---
         if axis == 'horizontal':
-            if self.direction.x > 0: self.rect.right = self.paddle.rect.left
-            else: self.rect.left = self.paddle.rect.right
-            self.direction.x *= -1
-            self.pos.x = self.rect.centerx
+            if self.rect.centerx < self.paddle.rect.centerx: 
+                self.rect.right = self.paddle.rect.left - 5
+                self.direction.x = -abs(self.direction.x)
+            else: 
+                self.rect.left = self.paddle.rect.right + 5
+                self.direction.x = abs(self.direction.x)
+            self.speed = self.paddle.speed
+        
+        # --- Vertical ---
         else:
             self.rect.bottom = self.paddle.rect.top
+            influence = (self.rect.centerx - self.paddle.rect.centerx) / (PADDLE_WIDTH / 2)
+            self.direction.x += influence * 0.5
             self.direction.y *= -1
-            self.pos.y = self.rect.centery
-        
+            self.direction = self.direction.normalize()
+
+        print(self.direction)
         self.pos = pygame.Vector2(self.rect.center)
 
     def handle_obstacle_collision(self, hits, axis):
