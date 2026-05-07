@@ -5,14 +5,15 @@ from settings import *
 from random import randint, uniform, choice
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, groups, obstacles, paddle):
+    """Ball class"""
+    def __init__(self, level, paddle, groups, obstacles):
         super().__init__(groups)
         self.obstacles = obstacles
         self.paddle = paddle
+        self.level = level
 
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
         self.image.fill(BALL_COLOR)
-
         self.rect = self.image.get_rect(center = self.get_ball_start_pos())
         self.pos = pygame.Vector2(self.rect.center)
 
@@ -120,6 +121,7 @@ class Ball(pygame.sprite.Sprite):
         # --- If the ball hit between two bricks kill them all ---
         for hit in hits:
             if getattr(hit, 'is_brick', False):
+                self.level.score += hit.score
                 hit.kill()
         
         self.pos = pygame.Vector2(self.rect.center)

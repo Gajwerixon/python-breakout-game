@@ -1,11 +1,16 @@
 import pygame
+
+from math import ceil
 from settings import *
 
 class Level:
     """Level class"""
-    def __init__(self, all_sprites, obstacles):
+    def __init__(self, surface, all_sprites, obstacles):
         self.all_sprites = all_sprites
         self.obstacles = obstacles
+        self.surface = surface
+
+        self.score = 0
 
     def initialize_game(self):
         """Initialize game"""
@@ -30,7 +35,11 @@ class Level:
             for row in range(BRICKS_ROW):
                 x = MARGIN_X + BRICK_WIDTH * row
                 y = MARGIN_Y + BRICK_HEIGHT * (col_idx)
-                Brick(current_color, x, y, groups)
+                Brick(current_color, x, y, col_idx, groups)
+
+    def reset_score(self):
+        """Reset score"""
+        self.score = 0
 
 class Wall(pygame.sprite.Sprite):
     """Wall class"""
@@ -44,7 +53,7 @@ class Wall(pygame.sprite.Sprite):
 
 class Brick(pygame.sprite.Sprite):
     """Brick class"""
-    def __init__(self, color, pos_x, pos_y, groups):
+    def __init__(self, color, pos_x, pos_y, col_idx, groups):
         super().__init__(groups)
         self.image = pygame.Surface((BRICK_WIDTH, BRICK_HEIGHT))
         # --- Fill with black (for border) ---
@@ -52,7 +61,16 @@ class Brick(pygame.sprite.Sprite):
 
         # --- Add inner rect ---
         inner_rect = pygame.Rect(2, 2, BRICK_WIDTH - 4, BRICK_HEIGHT - 4)
-        pygame.draw.rect(self.image, color, inner_rect)
+        self.color = color
+        pygame.draw.rect(self.image, self.color, inner_rect)
         self.rect = self.image.get_rect(topleft = (pos_x, pos_y))
 
+        self.score = self.get_score()
         self.is_brick = True
+
+    def get_score(self):
+        """Score assign"""
+        if self.color == (231, 235, 12): return 1
+        elif self.color == (12, 235, 45): return 3
+        elif self.color == (232, 132, 9): return 5
+        else: return 7
