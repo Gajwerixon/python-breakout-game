@@ -23,12 +23,13 @@ class Ball(pygame.sprite.Sprite):
     def get_ball_start_pos(self):
         """Choose random ball start position"""
         pos_y = BALL_START_Y
-        pos_x = 300
+        pos_x = randint(OFFSET_X + WALL_THICKNESS + 50, 
+                        WIDTH - OFFSET_X - WALL_THICKNESS - 50)
         return (pos_x, pos_y)
     
     def get_ball_start_direction(self):
         """Select random ball start direction"""
-        x = 0.5
+        x = uniform(0.3, 0.7) * choice([-1, 1])
         y = 0.5
         return pygame.Vector2(x, y)
     

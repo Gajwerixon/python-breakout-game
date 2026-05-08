@@ -15,6 +15,14 @@ class Paddle(pygame.sprite.Sprite):
         # --- Obstacles -> walls ---
         self.obstacles = obstacles
 
+    def reset(self):
+        self.image = pygame.Surface((PADDLE_WIDTH, PADDLE_HEIGHT))
+        self.image.fill(PADDLE_COLOR)
+        self.rect = self.image.get_rect(midbottom = (WIDTH // 2, HEIGHT - 20))
+
+        self.speed = PADDLE_SPEED
+        self.direction = pygame.Vector2(0, 0)
+
     def input(self):
         """User input"""
         keys = pygame.key.get_pressed()
