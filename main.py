@@ -32,7 +32,7 @@ class Game:
         self.ui = UI(self.surface)
 
         # --- Game variables ---
-        self.lives = 2
+        self.lives = 1
         self.current_level = 1
         self.high_score = 0
 
@@ -48,21 +48,25 @@ class Game:
                 if event.type == pygame.QUIT:
                     self.running = False
 
+            # --- Check for dead ---
             if not self.round_reset_timer and not self.game_reset_timer:
                 if self.check_dead():
-                    self.lives -= 1
-                    if self.lives >= 0:
+                    self.lives += 1
+                    if self.lives < 4:
                         self.round_reset_timer = self.current_time()
-                    elif self.lives < 0:
+                    elif self.lives >= 4:
                         self.game_reset_timer = self.current_time()
                     self.ball.kill()
             
+            # --- Reset round ---
             if self.round_reset_timer:
                 if pygame.time.get_ticks() - self.round_reset_timer > RESET_TIME_ROUNDS:
                     self.ball = Ball(self.level, self.paddle, self.all_sprites, self.obstacles)
                     self.round_reset_timer = None
             
+            # --- Reset game ---
             if self.game_reset_timer:
+                self.game_active = False
                 if pygame.time.get_ticks() - self.game_reset_timer > RESET_TIME_GAME:
                     self.reset_game()
                     self.game_reset_timer = None
@@ -98,10 +102,13 @@ class Game:
 
         # --- Reset game stats ---
         self.current_level = 1
-        self.lives = 2
+        self.lives = 1
 
         # --- Save high score (if occur) ---
         self.save_high_score()
+
+        # --- After all the resets, game is active ---
+        self.game_active = True
 
     def draw_screen(self):
         """Draw on screen"""
@@ -110,14 +117,16 @@ class Game:
         self.all_sprites.draw(self.surface)
 
         self.ui.show_ui(self.current_level, self.level.score, 
-                        self.lives, self.high_score)
+                        self.lives, self.high_score, self.game_active)
 
         pygame.display.flip()
 
     def save_high_score(self):
+        """Save high score"""
         pass
     
     def current_time(self):
+        """Retrun current time"""
         return pygame.time.get_ticks()
 
 game = Game()
