@@ -6,11 +6,11 @@ from random import randint, uniform, choice
 
 class Ball(pygame.sprite.Sprite):
     """Ball class"""
-    def __init__(self, level, paddle, groups, obstacles):
+    def __init__(self, game, paddle, groups, obstacles):
         super().__init__(groups)
         self.obstacles = obstacles
         self.paddle = paddle
-        self.level = level
+        self.game = game
 
         self.image = pygame.Surface((BALL_WIDTH, BALL_HEIGHT))
         self.image.fill(BALL_COLOR)
@@ -19,6 +19,7 @@ class Ball(pygame.sprite.Sprite):
 
         self.speed = BALL_START_SPEED
         self.direction = self.get_ball_start_direction().normalize()
+        self.speed_up = True
 
     def get_ball_start_pos(self):
         """Choose random ball start position"""
@@ -70,6 +71,8 @@ class Ball(pygame.sprite.Sprite):
         # --- Synchronize logical position with physical rect ---
         self.pos = pygame.Vector2(self.rect.center)
 
+        self.game.hits += 1
+
     def _handle_side_collision(self):
         """Handles ball hitting the left or right side of the paddle."""
         if self.rect.centerx < self.paddle.rect.centerx: 
@@ -119,13 +122,21 @@ class Ball(pygame.sprite.Sprite):
                 self.rect.top = obstacle.rect.bottom
             self.direction.y *= -1
 
-        # --- If the ball hit between two bricks kill them all ---
-        for hit in hits:
-            if getattr(hit, 'is_brick', False):
-                self.level.score += hit.score
-                hit.kill()
+        hit = hits[0]
+        if getattr(hit, 'is_brick', False):
+            self.game.score += hit.score
+            hit.kill()
         
         self.pos = pygame.Vector2(self.rect.center)
+
+    def increase_speed(self, score):
+        """Increase ball speed base on the stage"""
+        if self.speed_up: 
+            self.speed *= SPEED_MULTIPLEIER * (1.0005**score)
+
+    def is_above_bricks(self):
+        """Check if ball is_above_bricks through bricks"""
+        return self.pos.y <= MARGIN_Y
 
     def update(self, dt):
         """Update ball"""

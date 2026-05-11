@@ -10,20 +10,6 @@ class Level:
         self.obstacles = obstacles
         self.surface = surface
 
-        self.score = 0
-
-    def reset(self):
-        for obstacle in self.obstacles:
-            if getattr(obstacle, 'is_brick', False):
-                obstacle.kill()
-        
-        self.create_bricks()
-        self.reset_score()
-    
-    def reset_score(self):
-        """Reset score"""
-        self.score = 0
-
     def initialize_game(self):
         """Initialize game"""
         self.create_walls()
@@ -48,6 +34,14 @@ class Level:
                 x = MARGIN_X + BRICK_WIDTH * row
                 y = MARGIN_Y + BRICK_HEIGHT * (col_idx)
                 Brick(current_color, x, y, col_idx, groups)
+
+    def reset(self):
+        """Reset level"""
+        for obstacle in self.obstacles:
+            if getattr(obstacle, 'is_brick', False):
+                obstacle.kill()
+        
+        self.create_bricks()
 
 class Wall(pygame.sprite.Sprite):
     """Wall class"""
