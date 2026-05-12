@@ -1,4 +1,5 @@
 import pygame
+import json
 from settings import *
 from sys import exit
 
@@ -23,6 +24,7 @@ class Game:
         self.current_level = 1
         self.high_score = 0
         self.score = 0
+        self.high_score = 0
         self.hits = 0
 
         # --- Timers ---
@@ -140,13 +142,13 @@ class Game:
         self.paddle = Paddle(self.all_sprites, self.obstacles)
         self.ball = Ball(self, self.paddle, self.all_sprites, self.obstacles)
 
+        self.save_high_score()
+
         self.current_level = 1
         self.lives = 1
         self.score = 0
         
         self.hits = 0
-
-        self.save_high_score()
 
         self.game_active = True
 
@@ -168,7 +170,8 @@ class Game:
 
     def save_high_score(self):
         """Save high score"""
-        pass
+        if self.score > self.high_score:
+            self.high_score = self.score
 
 game = Game()
 game.run_game()

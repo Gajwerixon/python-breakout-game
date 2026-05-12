@@ -21,6 +21,22 @@ class Ball(pygame.sprite.Sprite):
         self.direction = self.get_ball_start_direction().normalize()
         self.speed_up = True
 
+        pygame.mixer.init()
+        self.wall_hit = pygame.mixer.Sound(
+            'assets/sound_effects/wall_hit_sound.mp3'
+        )
+        self.wall_hit.set_volume(0.2)
+
+        self.brick_hit = pygame.mixer.Sound(
+            'assets/sound_effects/brick_hit_sound.mp3'
+        )
+        self.brick_hit.set_volume(0.2)
+
+        self.paddle_hit = pygame.mixer.Sound(
+            'assets/sound_effects/paddle_hit_sound.mp3'
+        )
+        self.paddle_hit.set_volume(0.2)
+
     def get_ball_start_pos(self):
         """Choose random ball start position"""
         pos_y = BALL_START_Y
@@ -63,6 +79,8 @@ class Ball(pygame.sprite.Sprite):
         Coordinates ball behavior upon collision with the paddle.
         Separates horizontal (side) and vertical (top) bounce logic.
         """
+        self.paddle_hit.play()
+        
         if axis == 'horizontal':
             self._handle_side_collision()
         else:
@@ -125,7 +143,11 @@ class Ball(pygame.sprite.Sprite):
         hit = hits[0]
         if getattr(hit, 'is_brick', False):
             self.game.score += hit.score
+            self.brick_hit.play()
             hit.kill()
+        else:
+            self.wall_hit.play()
+            
         
         self.pos = pygame.Vector2(self.rect.center)
 
