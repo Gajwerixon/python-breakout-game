@@ -11,11 +11,28 @@ class UI:
         self.score_status = 'show'
         self.current_time = 0
 
+        self.level_up = False
+        self.level_status = 'show'
+
     def show_ui(self, level, score, lives, high_score, game_status):
-        self.update_score_visibility(score, game_status)
-        self.show_current_level(level)
-        self.show_lives(lives)
-        self.show_high_score(high_score)
+        if not self.level_up:
+            self.update_score_visibility(score, game_status)
+            self.show_current_level(level)
+            self.show_lives(lives)
+            self.show_high_score(high_score)
+        if self.level_up:
+            if self.level_status == 'show':
+                self.show_current_score(score)
+                self.show_current_level(level)
+                self.show_lives(lives)
+                self.show_high_score(high_score)
+                if pygame.time.get_ticks() - self.current_time >= LEVEL_UP_BLIT:
+                    self.level_status = 'hide'
+                    self.current_time = pygame.time.get_ticks()
+            else:
+                if pygame.time.get_ticks() - self.current_time >= LEVEL_UP_HIDE:
+                    self.level_status = 'show'
+                    self.current_time = pygame.time.get_ticks()
 
     def update_score_visibility(self, score, game_status):
         """Update score visibility"""

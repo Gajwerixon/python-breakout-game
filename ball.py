@@ -19,23 +19,9 @@ class Ball(pygame.sprite.Sprite):
 
         self.speed = BALL_START_SPEED
         self.direction = self.get_ball_start_direction().normalize()
-        self.speed_up = True
+        self.speed_stage_ready = True
 
-        pygame.mixer.init()
-        self.wall_hit = pygame.mixer.Sound(
-            'assets/sound_effects/wall_hit_sound.mp3'
-        )
-        self.wall_hit.set_volume(0.2)
-
-        self.brick_hit = pygame.mixer.Sound(
-            'assets/sound_effects/brick_hit_sound.mp3'
-        )
-        self.brick_hit.set_volume(0.2)
-
-        self.paddle_hit = pygame.mixer.Sound(
-            'assets/sound_effects/paddle_hit_sound.mp3'
-        )
-        self.paddle_hit.set_volume(0.2)
+        self.launched = True
 
     def get_ball_start_pos(self):
         """Choose random ball start position"""
@@ -79,7 +65,8 @@ class Ball(pygame.sprite.Sprite):
         Coordinates ball behavior upon collision with the paddle.
         Separates horizontal (side) and vertical (top) bounce logic.
         """
-        self.paddle_hit.play()
+        if self.launched:
+            self.game.play_sounds('paddle')
         
         if axis == 'horizontal':
             self._handle_side_collision()
@@ -105,6 +92,13 @@ class Ball(pygame.sprite.Sprite):
         
     def _handle_top_collision(self):
         """Handles ball bouncing off the top surface of the paddle."""
+        if not self.launched:
+            self.rect.bottom = self.paddle.rect.top
+            self.direction.y *= -1
+            self.direction.x = uniform(-0.75, 0.75)
+            self.direction = self.direction.normalize()
+            return
+        
         self.rect.bottom = self.paddle.rect.top
 
         # --- Calculate hit position relative to center (-1.0 to 1.0) ---
@@ -140,20 +134,20 @@ class Ball(pygame.sprite.Sprite):
                 self.rect.top = obstacle.rect.bottom
             self.direction.y *= -1
 
-        hit = hits[0]
-        if getattr(hit, 'is_brick', False):
-            self.game.score += hit.score
-            self.brick_hit.play()
-            hit.kill()
-        else:
-            self.wall_hit.play()
+        if self.launched:
+            hit = hits[0]
+            if getattr(hit, 'is_brick', False):
+                self.game.score += hit.score
+                self.game.play_sounds('brick')
+                hit.kill()
+            else:
+                self.game.play_sounds('wall')
             
-        
         self.pos = pygame.Vector2(self.rect.center)
 
     def increase_speed(self, score):
         """Increase ball speed base on the stage"""
-        if self.speed_up: 
+        if self.speed_stage_ready: 
             self.speed *= SPEED_MULTIPLEIER * (1.0005**score)
 
     def is_above_bricks(self):

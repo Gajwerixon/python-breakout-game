@@ -3,9 +3,9 @@ from settings import *
 
 class Paddle(pygame.sprite.Sprite):
     """Paddle class"""
-    def __init__(self, groups, obstacles, pos=None):
+    def __init__(self, groups, obstacles, pos=None, full_width=False):
         super().__init__(groups)
-        self.create_paddle(pos)
+        self.build_paddle(pos, full_width=full_width)
         self.speed = PADDLE_SPEED
         self.direction = pygame.Vector2(0, 0)
 
@@ -15,10 +15,16 @@ class Paddle(pygame.sprite.Sprite):
         # --- Shrink ---
         self.shrinked = False
 
-    def create_paddle(self, pos=None, shrink=False):
-        """Create new paddle"""
-        if not shrink: paddle_size = (PADDLE_WIDTH, PADDLE_HEIGHT)
-        else: paddle_size = (PADDLE_WIDTH / 2, PADDLE_HEIGHT)
+        self.active = True
+
+    def build_paddle(self, pos=None, shrink=False, full_width=False):
+        """Build new paddle"""
+        if full_width: 
+            paddle_size = ((WIDTH - (2 * OFFSET_X) - (2 * WALL_THICKNESS)), PADDLE_HEIGHT)
+        elif shrink: 
+            paddle_size = (PADDLE_WIDTH / 2, PADDLE_HEIGHT)
+        else: 
+            paddle_size = (PADDLE_WIDTH, PADDLE_HEIGHT)
 
         if pos is None: paddle_pos = (WIDTH // 2, HEIGHT - 20)
         else: paddle_pos = (pos)
@@ -35,7 +41,7 @@ class Paddle(pygame.sprite.Sprite):
         """Shrink paddle"""
         if not self.shrinked:
             current_pos = self.get_current_pos()
-            self.create_paddle(current_pos, True)
+            self.build_paddle(current_pos, True)
             self.shrinked = True
 
     def input(self):
@@ -48,7 +54,7 @@ class Paddle(pygame.sprite.Sprite):
     def movement(self, dt):
         """Paddle movement"""
         if self.direction.x != 0:
-            self.rect.x += self.direction[0] * self.speed * dt
+            self.rect.x += self.direction.x * self.speed * dt
 
             # --- Check collision with walls ---
             hit_list = pygame.sprite.spritecollide(self, self.obstacles, False)
@@ -61,7 +67,8 @@ class Paddle(pygame.sprite.Sprite):
 
     def update(self, dt):
         """Paddle update"""
-        self.input()
-        self.movement(dt)
+        if self.active:
+            self.input()
+            self.movement(dt)
 
     

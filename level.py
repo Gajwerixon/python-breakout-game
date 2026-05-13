@@ -21,7 +21,7 @@ class Level:
 
         Wall(WIDTH - OFFSET_X * 2, WALL_THICKNESS, OFFSET_X, OFFSET_Y, (self.obstacles, self.all_sprites))
         Wall(WALL_THICKNESS, HEIGHT, OFFSET_X, 0, (self.obstacles, self.all_sprites))
-        Wall(WALL_THICKNESS, HEIGHT, WIDTH - OFFSET_X, 0, groups)
+        Wall(WALL_THICKNESS, HEIGHT, WIDTH - OFFSET_X - WALL_THICKNESS, 0, groups)
 
     def create_bricks(self):
         """Create bricks"""
