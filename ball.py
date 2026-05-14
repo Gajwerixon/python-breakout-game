@@ -20,22 +20,38 @@ class Ball(pygame.sprite.Sprite):
         self.speed = BALL_START_SPEED
         self.direction = self.get_ball_start_direction().normalize()
         self.speed_stage_ready = True
-
-        self.launched = True
-
-    def get_ball_start_pos(self):
-        """Choose random ball start position"""
-        pos_y = BALL_START_Y
-        pos_x = randint(OFFSET_X + WALL_THICKNESS + 50, 
-                        WIDTH - OFFSET_X - WALL_THICKNESS - 50)
-        return (pos_x, pos_y)
+        self.active = True
     
-    def get_ball_start_direction(self):
-        """Select random ball start direction"""
-        x = uniform(0.3, 0.7) * choice([-1, 1])
-        y = 0.5
-        return pygame.Vector2(x, y)
-    
+    def update(self, dt):
+        """Update ball"""
+        if self.active:
+            self.movement(dt)
+
+    def hide(self):
+        """Hide ball"""
+        self.image.set_alpha(0)
+        self.active = False
+
+    def show(self):
+        """Show ball"""
+        self.image.set_alpha(255)
+        self.active = True
+
+    def reset(self):
+        self.rect = self.image.get_rect(center = self.get_ball_start_pos())
+        self.pos = pygame.Vector2(self.rect.center)
+
+        self.speed = BALL_START_SPEED
+        self.direction = self.get_ball_start_direction().normalize()
+        self.speed_stage_ready = True
+
+        self.show()
+
+    def increase_speed(self, score):
+        """Increase ball speed base on the stage"""
+        if self.speed_stage_ready: 
+            self.speed *= SPEED_MULTIPLEIER * (1.0005**score)
+
     def movement(self, dt):
         """Ball movement"""
         # --- Horizontal ---
@@ -65,9 +81,10 @@ class Ball(pygame.sprite.Sprite):
         Coordinates ball behavior upon collision with the paddle.
         Separates horizontal (side) and vertical (top) bounce logic.
         """
-        if self.launched:
+        if not self.is_attract:
             self.game.play_sounds('paddle')
-        
+            self.game.hits += 1
+
         if axis == 'horizontal':
             self._handle_side_collision()
         else:
@@ -76,7 +93,30 @@ class Ball(pygame.sprite.Sprite):
         # --- Synchronize logical position with physical rect ---
         self.pos = pygame.Vector2(self.rect.center)
 
-        self.game.hits += 1
+    def handle_obstacle_collision(self, hits, axis):
+        """Handle collision with obstacles (walls and bricks)"""
+        obstacle = hits[0]
+        if axis == 'horizontal':
+            if self.direction.x > 0: self.rect.right = obstacle.rect.left
+            else: self.rect.left = obstacle.rect.right
+            self.direction.x *= -1
+        else:
+            if self.direction.y > 0:
+                self.rect.bottom = obstacle.rect.top
+            else:
+                self.rect.top = obstacle.rect.bottom
+            self.direction.y *= -1
+
+        if not self.is_attract:
+            hit = hits[0]
+            if getattr(hit, 'is_brick', False):
+                self.game.score += hit.score
+                self.game.play_sounds('brick')
+                hit.kill()
+            else:
+                self.game.play_sounds('wall')
+            
+        self.pos = pygame.Vector2(self.rect.center)
 
     def _handle_side_collision(self):
         """Handles ball hitting the left or right side of the paddle."""
@@ -92,7 +132,7 @@ class Ball(pygame.sprite.Sprite):
         
     def _handle_top_collision(self):
         """Handles ball bouncing off the top surface of the paddle."""
-        if not self.launched:
+        if self.is_attract:
             self.rect.bottom = self.paddle.rect.top
             self.direction.y *= -1
             self.direction.x = uniform(-0.75, 0.75)
@@ -119,41 +159,26 @@ class Ball(pygame.sprite.Sprite):
 
         # --- Final normalization to keep speed consistent ---
         self.direction = self.direction.normalize()
-
-    def handle_obstacle_collision(self, hits, axis):
-        """Handle collision with obstacles (walls and bricks)"""
-        obstacle = hits[0]
-        if axis == 'horizontal':
-            if self.direction.x > 0: self.rect.right = obstacle.rect.left
-            else: self.rect.left = obstacle.rect.right
-            self.direction.x *= -1
-        else:
-            if self.direction.y > 0:
-                self.rect.bottom = obstacle.rect.top
-            else:
-                self.rect.top = obstacle.rect.bottom
-            self.direction.y *= -1
-
-        if self.launched:
-            hit = hits[0]
-            if getattr(hit, 'is_brick', False):
-                self.game.score += hit.score
-                self.game.play_sounds('brick')
-                hit.kill()
-            else:
-                self.game.play_sounds('wall')
-            
-        self.pos = pygame.Vector2(self.rect.center)
-
-    def increase_speed(self, score):
-        """Increase ball speed base on the stage"""
-        if self.speed_stage_ready: 
-            self.speed *= SPEED_MULTIPLEIER * (1.0005**score)
-
+    
+    @property
+    def is_attract(self):
+        """Check if the game is in 'ATTRACT' mode"""
+        return self.game.mode == "ATTRACT"
+    
+    @property
     def is_above_bricks(self):
         """Check if ball is_above_bricks through bricks"""
         return self.pos.y <= MARGIN_Y
 
-    def update(self, dt):
-        """Update ball"""
-        self.movement(dt)    
+    def get_ball_start_pos(self):
+        """Choose random ball start position"""
+        pos_y = BALL_START_Y
+        pos_x = randint(OFFSET_X + WALL_THICKNESS + 50, 
+                        WIDTH - OFFSET_X - WALL_THICKNESS - 50)
+        return (pos_x, pos_y)
+    
+    def get_ball_start_direction(self):
+        """Select random ball start direction"""
+        x = uniform(0.3, 0.7) * choice([-1, 1])
+        y = uniform(0.5, 0.7)
+        return pygame.Vector2(x, y)

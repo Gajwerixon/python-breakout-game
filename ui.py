@@ -4,76 +4,96 @@ from settings import *
 
 class UI:
     """User Interface class"""
-    def __init__(self, surface):
-        self.surface = surface
+    def __init__(self, game):
+        self.game = game
+        self.surface = game.surface
+
         self.font = pygame.font.Font('assets/Emulogic.ttf', FONT_SIZE)
 
-        self.score_status = 'show'
-        self.current_time = 0
-
-        self.level_up = False
+        self.timers = {'score': 0, 'level': 0}
         self.level_status = 'show'
+        self.score_status = 'show'
 
-    def show_ui(self, level, score, lives, high_score, game_status):
-        if not self.level_up:
-            self.update_score_visibility(score, game_status)
-            self.show_current_level(level)
-            self.show_lives(lives)
-            self.show_high_score(high_score)
-        if self.level_up:
-            if self.level_status == 'show':
-                self.show_current_score(score)
-                self.show_current_level(level)
-                self.show_lives(lives)
-                self.show_high_score(high_score)
-                if pygame.time.get_ticks() - self.current_time >= LEVEL_UP_BLIT:
-                    self.level_status = 'hide'
-                    self.current_time = pygame.time.get_ticks()
-            else:
-                if pygame.time.get_ticks() - self.current_time >= LEVEL_UP_HIDE:
-                    self.level_status = 'show'
-                    self.current_time = pygame.time.get_ticks()
+    def draw(self):
+        """Draw ui"""
+        if self.game.mode == 'PLAYING':
+            self.draw_playing_ui()
 
-    def update_score_visibility(self, score, game_status):
-        """Update score visibility"""
-        if game_status == True:
-            if self.score_status == 'show':
-                self.show_current_score(score)
-                if pygame.time.get_ticks() - self.current_time >= SCORE_BLIT:
-                    self.score_status = 'hide'
-                    self.current_time = pygame.time.get_ticks()
-            else:
-                if pygame.time.get_ticks() - self.current_time >= SCORE_HIDE:
-                    self.score_status = 'show'
-                    self.current_time = pygame.time.get_ticks()
+        if self.game.mode == 'LEVEL_UP':
+            self.draw_level_up_ui()
+        
+        if self.game.mode not in ('PLAYING', 'LEVEL_UP'):
+            self.draw_static_ui()
+
+    def draw_playing_ui(self):
+        """Draw playing ui"""
+        self.update_score_visibility()
+
+        elements = (('high_score', *UI_LAYOUT['high_score']), 
+                    ('lives', *UI_LAYOUT['lives']), ('current_level', *UI_LAYOUT['current_level']))
+        
+        for value, pos, align, padded in elements:
+            self.draw_text(value, pos, align, padded)
+
+    def draw_level_up_ui(self):
+        """Draw level_up ui"""
+        if self.level_status == 'show':
+            
+            elements = (('score', *UI_LAYOUT['score']), ('high_score', *UI_LAYOUT['high_score']), 
+                    ('lives', *UI_LAYOUT['lives']), ('current_level', *UI_LAYOUT['current_level']))
+        
+            for value, pos, align, padded in elements:
+                self.draw_text(value, pos, align, padded)
+
+            if self.blink('level', TIMERS['level_up_blink_on']):
+                self.level_status = 'hide'
+                self.current_time = pygame.time.get_ticks()
         else:
-            self.show_current_score(score)
-            self.score_status = 'show'
+            if self.blink('level', TIMERS['level_up_blink_off']):
+                self.level_status = 'show'
+                self.current_time = pygame.time.get_ticks()
 
-    def show_current_score(self, score):
-        """Show score on screen"""
-        text_surface = self.font.render(f'{score:03d}', True, 'white')
-        text_rect = text_surface.get_rect(topright = (SCORE_POS_X, SCORE_POS_Y))
+    def draw_static_ui(self):
+        """Draw static ui"""
+        elements = (('score', *UI_LAYOUT['score']), ('high_score', *UI_LAYOUT['high_score']), 
+                    ('lives', *UI_LAYOUT['lives']), ('current_level', *UI_LAYOUT['current_level']))
+        
+        for value, pos, align, padded in elements:
+            self.draw_text(value, pos, align, padded)
 
-        self.surface.blit(text_surface, text_rect)
+    def draw_text(self, value, pos, align='left', padded=True):
+        value = getattr(self.game, value)
+        
+        if padded:
+            text = f'{value:03d}'
+        else:
+            text = str(value)
 
-    def show_current_level(self, level):
-        """Show current level on screen"""
-        text_surface = self.font.render(f'{level}', True, 'white')
-        text_rect = text_surface.get_rect(topleft=(LEVEL_POS_X, LEVEL_POS_Y))
+        text_surface = self.font.render(text, True, 'white')
 
-        self.surface.blit(text_surface, text_rect)
-
-    def show_lives(self, lives):
-        """Show player lives on screen"""
-        text_surface = self.font.render(f'{lives}', True, 'white')
-        text_rect = text_surface.get_rect(topleft=(LIVES_POS_X, LIVES_POS_Y))
-
-        self.surface.blit(text_surface, text_rect)
-
-    def show_high_score(self, high_score):
-        """Show high score on screen"""
-        text_surface = self.font.render(f'{high_score:03d}', True, 'white')
-        text_rect = text_surface.get_rect(topright = (HIGH_SCORE_POS_X, HIGH_SCORE_POS_Y))
+        if align == 'right':
+            text_rect = text_surface.get_rect(topright=(pos))
+        else:
+            text_rect = text_surface.get_rect(topleft=(pos))
 
         self.surface.blit(text_surface, text_rect)
+
+    def blink(self, key, interval):
+        if pygame.time.get_ticks() - self.timers[key] >= interval:
+            self.timers[key] = pygame.time.get_ticks()
+            return True
+        return False
+
+    def update_score_visibility(self):
+        """Update score visibility"""
+        if self.score_status == 'show':
+            pos, align, padded = UI_LAYOUT['score']
+            self.draw_text('score', pos, align, padded)
+
+            if self.blink('score', TIMERS['score_blink_on']):
+                self.score_status = 'hide'
+                self.current_time = pygame.time.get_ticks()
+        else:
+            if self.blink('score', TIMERS['score_blink_off']):
+                self.score_status = 'show'
+                self.current_time = pygame.time.get_ticks()

@@ -1,4 +1,5 @@
 import pygame
+
 from settings import *
 from sys import exit
 
@@ -15,44 +16,34 @@ class Game:
         self.surface = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption('Breakout')
         self.clock = pygame.time.Clock()
-        self.running = True
-        self.game_active = True
 
-        # --- Game variables ---
+        self.mode = 'ATTRACT'
+        self.mode_start = None
+
         self.lives = 3
         self.current_level = 1
         self.high_score = 0
         self.score = 0
         self.hits = 0
-
-        # --- Timers ---
-        self.round_reset_timer = None
-        self.spawn_ball = None
-        self.restart_delay_timer = None
-        self.level_up = None
         
-        # --- Sprites ---
         self.all_sprites = pygame.sprite.Group()
         self.obstacles = pygame.sprite.Group()
+
         self.level = Level(self.surface, self.all_sprites, self.obstacles)
-        self.paddle = Paddle(self.all_sprites, self.obstacles)
+        self.paddle = Paddle(self, self.all_sprites, self.obstacles, full_width=True)
         self.ball = Ball(self, self.paddle, self.all_sprites, self.obstacles)
 
-        # --- Initialize game ---
-        self.level.initialize_game()
-        self.ui = UI(self.surface)
-
+        self.ui = UI(self)
         self.sounds = self.load_sounds()
+
+        self.level.generate_attract_layout()
 
     def run_game(self):
         """Main game loop"""
-        while self.running:
+        while True:
             dt = self.clock.tick(60) / 1000
-
             self.handle_events()
-
             self.update(dt)
-
             self.draw()
 
     def handle_events(self):
@@ -63,76 +54,71 @@ class Game:
                 pygame.quit()
                 exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE and not self.game_active:
-                    self.reset_game()
+                if event.key == pygame.K_SPACE and self.mode == 'ATTRACT':
+                    self.start_game()
+                    self.mode = 'RESET_ROUND'
 
     def update(self, dt):
         """Update game"""
-        self.handle_ball_loss()
-
         self.handle_timers()
-        
-        if self.ball and self.game_active:
-            self.update_difficulty()
 
-        self.next_level()
+        if self.mode == 'PLAYING':
+            self.handle_ball_loss()
+            self.update_difficulty()
+            self.next_level()
 
         self.all_sprites.update(dt)
 
-    def handle_ball_loss(self):
-        """Handle if ball goes under screen"""
-        if not self.ball:
-            return
+    def draw(self):
+        """Draw on screen"""
+        self.surface.fill('black')
 
+        self.all_sprites.draw(self.surface)
+
+        self.ui.draw()
+
+        pygame.display.flip()
+
+    def handle_timers(self):
+        """Handle timers"""
+        if self.mode == 'RESET_ROUND':
+            if pygame.time.get_ticks() - self.mode_start >= TIMERS['ball_spawn']:
+                self.ball.reset()
+                self.mode = 'PLAYING'
+        
+        if self.mode == 'RESET_GAME':
+            if pygame.time.get_ticks() - self.mode_start >= TIMERS['reset_game']:
+                self.ball.reset()
+                self.mode = 'ATTRACT'
+
+        if self.mode == 'LEVEL_UP':
+            if pygame.time.get_ticks() - self.mode_start > TIMERS['level_up']:
+                self.level.generate_normal_layout()
+                self.mode = 'PLAYING'
+
+    def handle_ball_loss(self):
+        """Handle if ball goes under screen"""        
         if self.ball.rect.top <= HEIGHT:
             return
-
-        self.lives -= 1
-
-        self.ball.kill()
-        self.ball = None
-
-        current_time = pygame.time.get_ticks()
-        if self.lives > 0:
-            self.round_reset_timer = current_time
-        else:
-            self.game_active = False
-            self.prepare_restart()
-
-    def next_level(self):
-        if self.score / self.current_level != 448:
-            return
         
-        if not self.level_up:
-            self.play_sounds('win')
-            self.ui.level_up = True
-
-            self.ball.kill()
-
-            paddle_pos = self.paddle.get_current_pos()
-            self.paddle.kill()
-
-            self.paddle = Paddle(self.all_sprites, self.obstacles, paddle_pos)
-
-            self.current_level += 1
-            self.hits = 0
-
-            self.level_up = pygame.time.get_ticks()
-
-    def prepare_restart(self):
-        """This is intermidate stage between player loss and restart of the new game"""
-        self.paddle.kill()
-        self.paddle = Paddle(self.all_sprites, self.obstacles, full_width=True)
-        self.paddle.active = False
+        if self.mode == 'PLAYING' and self.ball.rect.top >= HEIGHT:
+            self.lives -= 1
+            self.ball.hide()
         
-        # --- Handle timers is waiting for 1.5 secound and create new ball ---
-        self.restart_delay_timer = pygame.time.get_ticks()
+        if self.lives > 0 and self.mode != 'RESET_ROUND':
+            self.mode = 'RESET_ROUND'
+            self.reset_round()
+        
+        if self.lives == 0 and self.mode != 'RESET_GAME':
+            self.mode = 'RESET_GAME'
+            self.enter_game_over_state()
 
     def update_difficulty(self):
         """Update difficulty base on two conditions"""
         self.handle_speed_progression()
-        if self.ball.is_above_bricks():
-            self.paddle.shrink()
+        if self.ball.is_above_bricks and not self.paddle.shrinked:
+            self.paddle.build_paddle(self.paddle.get_current_pos(), True)
+            self.paddle.shrinked = True
 
     def handle_speed_progression(self):
         """Handle speed progression base on hits and current score"""
@@ -142,87 +128,56 @@ class Game:
         else:        
             self.ball.speed_stage_ready = True
 
-    def handle_timers(self):
-        """Handle timers"""
-        # --- Reset round ---
-        if self.round_reset_timer:
-            if pygame.time.get_ticks() - self.round_reset_timer > RESET_TIME_ROUNDS:
-                self.reset_round()
-                self.round_reset_timer = None
-
-        # --- Ball spawn after reset ---
-        if self.restart_delay_timer:
-            if pygame.time.get_ticks() - self.restart_delay_timer > RESET_TIME_ROUNDS and not self.game_active:
-                self.ball = Ball(self, self.paddle, self.all_sprites, self.obstacles)
-                self.ball.launched = False
-                self.restart_delay_timer = False
+    def next_level(self):
+        """If the play destroy all bricks, create next level"""
+        if self.level.bricks_remaining != 0:
+            return
         
-        # --- Reset game ---
-        if self.spawn_ball:
-            if pygame.time.get_ticks() - self.spawn_ball > RESET_TIME_ROUNDS:
-                self.ball = Ball(self, self.paddle, self.all_sprites, self.obstacles)
-                self.spawn_ball = None
+        if self.mode == 'PLAYING':
+            self.play_sounds('win')
+            self.ui.level_up = True
 
-        if self.level_up:
-            if pygame.time.get_ticks() - self.level_up > LEVEL_UP_TIME:
-                self.level_up = None
-                self.level.reset()
-                self.ui.level_up = False
-                self.spawn_ball = pygame.time.get_ticks()
+            self.paddle.build_paddle(self.paddle.get_current_pos())
 
-    def reset_round(self):
-        """Reset round"""
-        self.ball = Ball(self, self.paddle, self.all_sprites, self.obstacles)
-        self.ball.speed = BALL_START_SPEED
-        self.ball.speed_stage_ready = True
+            self.current_level += 1
+            self.hits = 0
 
-        if self.paddle.shrinked:
-            old_pos = self.paddle.get_current_pos()
-            self.paddle.kill()
-            self.paddle = Paddle(self.all_sprites, self.obstacles, old_pos)
-            self.paddle.shrinked = False
+            self.mode = 'LEVEL_UP'
+            self.mode_start = pygame.time.get_ticks()
 
-        self.hits = 0
-        self.round_reset_timer = None
-
-    def reset_game(self):
-        """Reset game after player loss all 3 lives"""
-        if self.ball:
-            self.ball.kill()
-
-        self.paddle.kill()
-
-        self.level.reset()
-
-        self.paddle = Paddle(self.all_sprites, self.obstacles)
+    def start_game(self):
+        """Start game """
+        self.level.reset_bricks()
 
         self.save_high_score()
 
         self.current_level = 1
         self.lives = 3
-        self.score = 0
+        self.score = 0    
+        self.hits = 0
+        
+        self.paddle.build_paddle()
+
+        self.ball.hide()
+
+        self.mode_start = pygame.time.get_ticks()
+
+    def reset_round(self):
+        """Reset round"""
+        if self.paddle.shrinked:
+            self.paddle.build_paddle(self.paddle.get_current_pos())
+            self.paddle.shrinked = False
         
         self.hits = 0
 
-        self.game_active = True
+        self.mode_start = pygame.time.get_ticks()
 
-        self.spawn_ball = pygame.time.get_ticks()
-
-    def draw(self):
-        """Draw on screen"""
-        self.surface.fill('black')
-
-        self.all_sprites.draw(self.surface)
-
-        self.ui.show_ui(
-            self.current_level, 
-            self.score, 
-            self.lives, 
-            self.high_score, 
-            self.game_active
-        )
-
-        pygame.display.flip()
+    def enter_game_over_state(self):
+        """Intermidate stage between player loss and new game"""
+        self.paddle.build_paddle(full_width=True)
+        
+        # --- Waiting for 2.5 second and create new ball ---
+        self.mode_start = pygame.time.get_ticks()
 
     def save_high_score(self):
         """Save high score"""

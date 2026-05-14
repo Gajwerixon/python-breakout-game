@@ -1,6 +1,5 @@
 import pygame
 
-from math import ceil
 from settings import *
 
 class Level:
@@ -8,40 +7,61 @@ class Level:
     def __init__(self, surface, all_sprites, obstacles):
         self.all_sprites = all_sprites
         self.obstacles = obstacles
-        self.surface = surface
 
-    def initialize_game(self):
-        """Initialize game"""
+        self.groups = (all_sprites, obstacles)
+
         self.create_walls()
-        self.create_bricks()
 
-    def create_walls(self):
-        """Create walls"""
-        groups = (self.all_sprites, self.obstacles)
+    def generate_attract_layout(self):
+        """Generate attract layout"""
+        grid = [[0, 0, 0, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0],
+                [0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+                [0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 0],
+                [0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 0],
+                [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0],]
 
-        Wall(WIDTH - OFFSET_X * 2, WALL_THICKNESS, OFFSET_X, OFFSET_Y, (self.obstacles, self.all_sprites))
-        Wall(WALL_THICKNESS, HEIGHT, OFFSET_X, 0, (self.obstacles, self.all_sprites))
-        Wall(WALL_THICKNESS, HEIGHT, WIDTH - OFFSET_X - WALL_THICKNESS, 0, groups)
-
-    def create_bricks(self):
-        """Create bricks"""
-        groups = (self.all_sprites, self.obstacles)
-
-        for col_idx in range(BRICK_COLS):
+        for col_idx in range(BRICK_GRID_COLS):
             color_idx = (col_idx // ROWS_PER_COLOR) % len(BRICK_COLORS)
             current_color = BRICK_COLORS[color_idx]
-            for row in range(BRICKS_ROW):
+            for row in range(BRICK_GRID_ROWS):
+                if grid[col_idx][row] == 1:
+                    x = MARGIN_X + BRICK_WIDTH * row
+                    y = MARGIN_Y + BRICK_HEIGHT * (col_idx)
+                    Brick(current_color, x, y, col_idx, self.groups)
+
+    def generate_normal_layout(self):
+        """Generate standard brick layout used for normal gameplay levels"""
+        for col_idx in range(BRICK_GRID_COLS):
+            color_idx = (col_idx // ROWS_PER_COLOR) % len(BRICK_COLORS)
+            current_color = BRICK_COLORS[color_idx]
+            for row in range(BRICK_GRID_ROWS):
                 x = MARGIN_X + BRICK_WIDTH * row
                 y = MARGIN_Y + BRICK_HEIGHT * (col_idx)
-                Brick(current_color, x, y, col_idx, groups)
+                Brick(current_color, x, y, col_idx, self.groups)
 
-    def reset(self):
-        """Reset level"""
+    def reset_bricks(self):
+        """Delete old bricks and new bricks layout"""
         for obstacle in self.obstacles:
             if getattr(obstacle, 'is_brick', False):
                 obstacle.kill()
         
-        self.create_bricks()
+        self.generate_normal_layout()
+
+    def create_walls(self):
+        """Create walls"""
+        Wall(WIDTH - OFFSET_X * 2, WALL_THICKNESS, OFFSET_X, OFFSET_Y, (self.obstacles, self.all_sprites))
+        Wall(WALL_THICKNESS, HEIGHT, OFFSET_X, 0, (self.obstacles, self.all_sprites))
+        Wall(WALL_THICKNESS, HEIGHT, WIDTH - OFFSET_X - WALL_THICKNESS, 0, self.groups)
+
+    @property
+    def bricks_remaining(self):
+        return sum(
+            1 for obstacle in self.obstacles
+            if getattr(obstacle, 'is_brick', False)
+        )
 
 class Wall(pygame.sprite.Sprite):
     """Wall class"""
