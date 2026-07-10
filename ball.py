@@ -127,6 +127,7 @@ class Ball(pygame.sprite.Sprite):
             self.rect.right = self.paddle.rect.left - 5
             self.direction.x = -abs(self.direction.x)
 
+            # Ensure that ball will not block go over wall
             if self.rect.left < screen_left:
                 self.rect.left = screen_left
                 self.paddle.rect.left = self.rect.right + 5 
@@ -135,6 +136,7 @@ class Ball(pygame.sprite.Sprite):
             self.rect.left = self.paddle.rect.right + 5
             self.direction.x = abs(self.direction.x)
 
+            # Ensure that ball will not block go over wall
             if self.rect.right > screen_right:
                 self.rect.right = screen_right
                 self.paddle.rect.right = self.rect.left - 5
