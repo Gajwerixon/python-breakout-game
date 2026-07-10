@@ -120,12 +120,25 @@ class Ball(pygame.sprite.Sprite):
 
     def _handle_side_collision(self):
         """Handles ball hitting the left or right side of the paddle."""
+        screen_left = OFFSET_X + WALL_THICKNESS
+        screen_right = WIDTH - OFFSET_X - WALL_THICKNESS
+
         if self.rect.centerx < self.paddle.rect.centerx: 
             self.rect.right = self.paddle.rect.left - 5
             self.direction.x = -abs(self.direction.x)
+
+            if self.rect.left < screen_left:
+                self.rect.left = screen_left
+                self.paddle.rect.left = self.rect.right + 5 
+                self.direction.x = abs(self.direction.x)
         else: 
             self.rect.left = self.paddle.rect.right + 5
             self.direction.x = abs(self.direction.x)
+
+            if self.rect.right > screen_right:
+                self.rect.right = screen_right
+                self.paddle.rect.right = self.rect.left - 5
+                self.direction.x = -abs(self.direction.x)
         
         # --- Ensure clean bounce by resolving paddle-ball intersection ---
         self.speed = self.speed + (self.paddle.speed * 0.2)
